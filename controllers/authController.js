@@ -5,29 +5,33 @@ const bcrypt =require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const register = async (req, res) => {
-    const { first_name, last_name, email, password } = req.body;
+    const { first_name, last_name, email, password ,role} = req.body;
   
     // Validation des champs requis
-    if (!first_name || !last_name || !email || !password) {
+    if (!first_name || !last_name || !email || !password||!role) {
       return res.status(400).json({ message: "All fields are required" });
     }
-  
+    const validRoles = ["admin", "User"];
+    if (!validRoles.includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+    }
     try {
-      // Vérifier si l'utilisateur existe déjà
+     
       const duplicatedEmail = await User.findOne({ email }).exec();
       if (duplicatedEmail) {
         return res.status(409).json({ message: "User already exists" });
       }
   
-      // Hashage du mot de passe
+   
       const hashedPassword = await bcrypt.hash(password, 10);
   
-      // Création de l'utilisateur
+  
       await User.create({
         first_name,
         last_name,
         email,
         password: hashedPassword,
+        role,
       });
   
       return res.status(201).json({ message: "User created successfully" });
@@ -57,11 +61,12 @@ const register = async (req, res) => {
         return res.status(401).json({ message: "Invalid email or password" });
       }
   
-      // Génération du token JWT
+    
       const accessToken = jwt.sign(
         {
           userInfo: {
             id: foundUser._id,
+            role: foundUser.role,
           },
         },
         process.env.ACCESS_TOKEN_SECRET,
